@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR Enterprise AI Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: #f8fafc;
+            font-family: sans-serif;
+        }
+
+        .glass {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+    </style>
+</head>
+
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <!-- Sidebar -->
+    <aside class="w-full md:w-64 glass p-6 flex flex-col gap-4">
+        <h1 class="text-2xl font-bold text-blue-400">HR AI Nexus</h1>
+        <nav class="space-y-2 mt-8">
+            <button onclick="show('dash')"
+                class="w-full text-left p-3 hover:bg-slate-700 rounded transition">Dashboard</button>
+            <button onclick="show('predict')"
+                class="w-full text-left p-3 hover:bg-slate-700 rounded transition">Predictor</button>
+            <button onclick="show('mgmt')"
+                class="w-full text-left p-3 hover:bg-slate-700 rounded transition">Management</button>
+            <button onclick="logout()"
+                class="w-full text-left p-3 hover:bg-red-500/20 text-red-300 rounded transition mt-8 flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                    stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+                Logout
+            </button>
+
+        </nav>
+    </aside>
+
+    <!-- Main -->
+    <main class="flex-1 p-6 overflow-auto">
+
+        <!-- Dashboard View -->
+        <div id="dash" class="space-y-6">
+            <header class="flex justify-between items-center flex-wrap gap-4">
+                <h2 class="text-3xl font-bold">Overview <span id="deptFilterLabel" class="text-lg text-blue-400"></span>
+                </h2>
+                <div class="flex gap-3 items-center">
+                    <select id="departmentFilter"
+                        class="bg-slate-800 px-4 py-2 rounded text-white border border-slate-600 hover:border-blue-500 transition">
+                        <option value="">All Departments</option>
+                    </select>
+                    <button onclick="clearDepartmentFilter()"
+                        class="bg-slate-700 px-4 py-2 rounded hover:bg-slate-600 transition">
+                        Clear Filter
+                    </button>
+                    <button onclick="loadStats()" class="bg-blue-600 px-4 py-2 rounded hover:bg-blue-500 transition">
+                        Refresh Stats
+                    </button>
+                </div>
+            </header>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="glass p-6 rounded-xl">
+                    <p class="text-slate-400">Total Employees</p>
+                    <p class="text-4xl font-bold" id="stat-total">0</p>
+                </div>
+                <div class="glass p-6 rounded-xl">
+                    <p class="text-slate-400">Attrition Rate</p>
+                    <p class="text-4xl font-bold text-red-400" id="stat-attr">0%</p>
+                </div>
+                <div class="glass p-6 rounded-xl">
+                    <p class="text-slate-400">Avg Rating</p>
+                    <p class="text-4xl font-bold text-yellow-400" id="stat-rating">0.0</p>
+                </div>
+            </div>
+
+            <div class="glass p-6 rounded-xl h-96">
+                <h3 class="text-xl font-bold mb-4" id="deptChartTitle">Department Distribution</h3>
+                <canvas id="deptChart"></canvas>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="attrChartTitle">Attrition Risk by Dept</h3>
+                    <canvas id="attrChart"></canvas>
+                </div>
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="scatterChartTitle">Salary vs Performance</h3>
+                    <canvas id="scatterChart"></canvas>
+                </div>
+            </div>
+
+            <!-- New Charts Row -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="salaryChartTitle">Avg Salary by Dept</h3>
+                    <canvas id="salaryBarChart"></canvas>
+                </div>
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="reasonChartTitle">Reasons for Attrition</h3>
+                    <canvas id="reasonChart"></canvas>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="ratingChartTitle">Ratings Distribution</h3>
+                    <canvas id="ratingBarChart"></canvas>
+                </div>
+                <div class="glass p-6 rounded-xl h-80">
+                    <h3 class="text-xl font-bold mb-4" id="yearChartTitle">Hiring Trends</h3>
+                    <canvas id="yearLineChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prediction View -->
+        <div id="predict" class="hidden space-y-6">
+            <h2 class="text-3xl font-bold">Attrition Prediction AI</h2>
+            <div class="flex gap-6 flex-col lg:flex-row">
+                <div class="glass p-8 rounded-xl flex-1">
+                    <form id="predForm" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <input type="number" id="age" placeholder="Age" value="30"
+                            class="bg-slate-800 p-3 rounded text-white">
+                        <select id="dept" class="bg-slate-800 p-3 rounded text-white">
+                            <option>Sales</option>
+                            <option>HR</option>
+                            <option>Engineering</option>
+                            <option>R&D</option>
+                            <option>Marketing</option>
+                        </select>
+                        <select id="role" class="bg-slate-800 p-3 rounded text-white">
+                            <option>Junior</option>
+                            <option>Senior</option>
+                            <option>Lead</option>
+                            <option>Manager</option>
+                        </select>
+                        <input type="number" id="salary" placeholder="Salary" value="60000"
+                            class="bg-slate-800 p-3 rounded text-white">
+                        <input type="number" id="year" placeholder="Joining Year" value="2019"
+                            class="bg-slate-800 p-3 rounded text-white">
+                        <select id="gender" class="bg-slate-800 p-3 rounded text-white">
+                            <option>Male</option>
+                            <option>Female</option>
+                        </select>
+                        <input type="number" id="rating" placeholder="Rating (1-5)" value="3"
+                            class="bg-slate-800 p-3 rounded text-white">
+                        <input type="number" id="hours" placeholder="Avg Daily Hours" value="8"
+                            class="bg-slate-800 p-3 rounded text-white">
+                        <input type="number" id="projects" placeholder="Projects Completed" value="5"
+                            class="bg-slate-800 p-3 rounded text-white">
+
+                        <div class="md:col-span-2 mt-4">
+                            <button type="submit"
+                                class="w-full bg-gradient-to-r from-purple-500 to-blue-500 py-3 rounded font-bold hover:opacity-90">Analyze
+                                Risk</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="glass p-8 rounded-xl w-full lg:w-1/3 flex flex-col items-center justify-center text-center hidden"
+                    id="resultCard">
+                    <p class="text-slate-400">Prediction Result</p>
+                    <h3 class="text-5xl font-bold my-4" id="resText">Risk</h3>
+                    <p class="text-xl">Probability: <span id="resProb" class="text-blue-300"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Management View -->
+        <div id="mgmt" class="hidden space-y-6">
+            <h2 class="text-3xl font-bold">HR Management</h2>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Add Employee Form -->
+                <div class="glass p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-4 text-green-400">Add New Employee</h3>
+                    <form id="addEmpForm" class="space-y-4">
+                        <input type="text" id="ne_name" placeholder="Full Name" required
+                            class="w-full bg-slate-800 p-3 rounded text-white border border-slate-700">
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="ne_age" placeholder="Age" required
+                                class="bg-slate-800 p-3 rounded text-white">
+                            <select id="ne_gender" class="bg-slate-800 p-3 rounded text-white">
+                                <option>Male</option>
+                                <option>Female</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <select id="ne_dept" class="bg-slate-800 p-3 rounded text-white">
+                                <option>Sales</option>
+                                <option>HR</option>
+                                <option>Engineering</option>
+                                <option>R&D</option>
+                                <option>Marketing</option>
+                            </select>
+                            <select id="ne_role" class="bg-slate-800 p-3 rounded text-white">
+                                <option>Junior</option>
+                                <option>Senior</option>
+                                <option>Lead</option>
+                                <option>Manager</option>
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="ne_salary" placeholder="Salary" required
+                                class="bg-slate-800 p-3 rounded text-white">
+                            <input type="number" id="ne_year" placeholder="Joining Year" required
+                                class="bg-slate-800 p-3 rounded text-white">
+                        </div>
+                        <button type="submit"
+                            class="w-full bg-green-600 py-3 rounded font-bold hover:bg-green-500 transition">Create
+                            Employee</button>
+                    </form>
+                </div>
+
+                <!-- Add Performance Form -->
+                <div class="glass p-6 rounded-xl">
+                    <h3 class="text-xl font-bold mb-4 text-yellow-400">Log Performance</h3>
+                    <form id="addPerfForm" class="space-y-4">
+                        <input type="number" id="np_id" placeholder="Employee ID" required
+                            class="w-full bg-slate-800 p-3 rounded text-white border border-slate-700">
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <input type="number" id="np_rating" placeholder="Rating (1-5)" min="1" max="5" required
+                                class="bg-slate-800 p-3 rounded text-white">
+                            <input type="number" id="np_projects" placeholder="Projects Completed" required
+                                class="bg-slate-800 p-3 rounded text-white">
+                        </div>
+                        <input type="number" id="np_hours" placeholder="Avg Daily Hours" required
+                            class="w-full bg-slate-800 p-3 rounded text-white">
+                        <div class="flex items-center gap-2">
+                            <input type="checkbox" id="np_attrition" class="w-5 h-5" onchange="toggleReasonField()">
+                            <label for="np_attrition">Mark as Attrition (Left Company)</label>
+                        </div>
+
+                        <div id="reasonField" class="hidden">
+                            <select id="np_reason"
+                                class="w-full bg-slate-800 p-3 rounded text-white border border-slate-700">
+                                <option value="">Select Reason</option>
+                                <option>Better Opportunity</option>
+                                <option>Work-Life Balance</option>
+                                <option>Relocation</option>
+                                <option>Career Change</option>
+                                <option>Salary</option>
+                                <option>Personal Reasons</option>
+                            </select>
+                        </div>
+
+                        <button type="submit"
+                            class="w-full bg-yellow-600 py-3 rounded font-bold hover:bg-yellow-500 transition">Update
+                            Record</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API = "http://localhost:8000";
+        let deptChart = null;
+        let attrChart = null;
+        let scatterChart = null;
+        let salaryChart = null;
+        let ratingChart = null;
+        let yearChart = null;
+        let reasonChart = null;
+        let currentDepartment = null;
+
+        function logout() {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+        }
+
+        function show(id) {
+            ['dash', 'predict', 'mgmt'].forEach(d => document.getElementById(d).classList.add('hidden'));
+            document.getElementById(id).classList.remove('hidden');
+        }
+
+        function clearDepartmentFilter() {
+            currentDepartment = null;
+            document.getElementById('departmentFilter').value = '';
+            document.getElementById('deptFilterLabel').innerText = '';
+            loadStats();
+        }
+
+        async function populateDepartmentFilter(departments) {
+            const select = document.getElementById('departmentFilter');
+            // Keep the "All Departments" option
+            select.innerHTML = '<option value="">All Departments</option>';
+
+            departments.forEach(dept => {
+                const option = document.createElement('option');
+                option.value = dept;
+                option.textContent = dept;
+                select.appendChild(option);
+            });
+        }
+
+        // Department filter change event
+        document.getElementById('departmentFilter').addEventListener('change', function (e) {
+            currentDepartment = e.target.value || null;
+            loadStats();
+        });
+
+        function toggleReasonField() {
+            const isAttr = document.getElementById('np_attrition').checked;
+            document.getElementById('reasonField').classList.toggle('hidden', !isAttr);
+        }
+
+        async function loadStats() {
+            try {
+                let data;
+
+                // Fetch data based on filter
+                if (currentDepartment) {
+                    const res = await fetch(`${API}/api/analytics/department/${encodeURIComponent(currentDepartment)}`);
+                    data = await res.json();
+
+                    // Update label to show filtered department
+                    document.getElementById('deptFilterLabel').innerText = `- ${currentDepartment}`;
+
+                    // For department-specific view, adjust the data structure
+                    data.dept_counts = { [currentDepartment]: data.total_employees };
+                    data.attrition_by_dept = { [currentDepartment]: data.attrition_count };
+                    data.salary_by_dept = { [currentDepartment]: data.avg_salary };
+
+                } else {
+                    const res = await fetch(`${API}/api/analytics`);
+                    data = await res.json();
+
+                    // Populate department filter dropdown
+                    if (data.departments) {
+                        await populateDepartmentFilter(data.departments);
+                    }
+
+                    // Clear label
+                    document.getElementById('deptFilterLabel').innerText = '';
+                }
+
+                // Update chart titles dynamically
+                if (currentDepartment) {
+                    document.getElementById('deptChartTitle').innerText = `${currentDepartment} - Employee Count`;
+                    document.getElementById('attrChartTitle').innerText = `${currentDepartment} - Attrition Status`;
+                    document.getElementById('scatterChartTitle').innerText = `${currentDepartment} - Salary vs Performance`;
+                    document.getElementById('salaryChartTitle').innerText = `${currentDepartment} - Average Salary`;
+                    document.getElementById('reasonChartTitle').innerText = `${currentDepartment} - Reasons for Attrition`;
+                    document.getElementById('ratingChartTitle').innerText = `${currentDepartment} - Ratings Distribution`;
+                    document.getElementById('yearChartTitle').innerText = `${currentDepartment} - Hiring Trends`;
+                } else {
+                    document.getElementById('deptChartTitle').innerText = 'Department Distribution';
+                    document.getElementById('attrChartTitle').innerText = 'Attrition Risk by Dept';
+                    document.getElementById('scatterChartTitle').innerText = 'Salary vs Performance';
+                    document.getElementById('salaryChartTitle').innerText = 'Avg Salary by Dept';
+                    document.getElementById('reasonChartTitle').innerText = 'Reasons for Attrition';
+                    document.getElementById('ratingChartTitle').innerText = 'Ratings Distribution';
+                    document.getElementById('yearChartTitle').innerText = 'Hiring Trends';
+                }
+
+                // Update stats cards
+                document.getElementById('stat-total').innerText = data.total_employees;
+                document.getElementById('stat-attr').innerText = data.attrition_rate + '%';
+                document.getElementById('stat-rating').innerText = data.avg_rating;
+
+                // Dept Bar Chart - Show single bar for filtered view or all departments
+                const ctx1 = document.getElementById('deptChart');
+                if (deptChart) deptChart.destroy();
+                deptChart = new Chart(ctx1, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.dept_counts),
+                        datasets: [{
+                            label: 'Employees',
+                            data: Object.values(data.dept_counts),
+                            backgroundColor: currentDepartment ? '#10b981' : '#60a5fa'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            title: {
+                                display: currentDepartment ? true : false,
+                                text: currentDepartment ? `${currentDepartment} Department` : '',
+                                color: '#f8fafc',
+                                font: { size: 14 }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+                // Attrition Doughnut Chart
+                const ctx2 = document.getElementById('attrChart');
+                if (attrChart) attrChart.destroy();
+
+                if (currentDepartment) {
+                    // For department view, show attrition vs non-attrition
+                    const attrCount = data.attrition_count || 0;
+                    const totalCount = data.total_employees || 1;
+                    const safeCount = totalCount - attrCount;
+
+                    attrChart = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Active', 'Attrition'],
+                            datasets: [{
+                                data: [safeCount, attrCount],
+                                backgroundColor: ['#22c55e', '#ef4444'],
+                                borderColor: 'transparent'
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#94a3b8' }
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    attrChart = new Chart(ctx2, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(data.attrition_by_dept),
+                            datasets: [{
+                                data: Object.values(data.attrition_by_dept),
+                                backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'],
+                                borderColor: 'transparent'
+                            }]
+                        },
+                        options: {
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'right',
+                                    labels: { color: '#94a3b8' }
+                                }
+                            }
+                        }
+                    });
+                }
+
+                // Scatter Chart Salary vs Rating
+                const ctx3 = document.getElementById('scatterChart');
+                if (scatterChart) scatterChart.destroy();
+                const scatterData = data.salary_rating_data.map(d => ({ x: d.Salary, y: d.Rating }));
+
+                scatterChart = new Chart(ctx3, {
+                    type: 'scatter',
+                    data: {
+                        datasets: [{
+                            label: 'Salary vs Rating',
+                            data: scatterData,
+                            backgroundColor: currentDepartment ? '#8b5cf6' : '#f472b6'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                title: { display: true, text: 'Rating', color: '#94a3b8' },
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                title: { display: true, text: 'Salary ($)', color: '#94a3b8' },
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        },
+                        plugins: { legend: { display: false } }
+                    }
+                });
+
+                // New Chart 1: Avg Salary by Dept
+                const ctx4 = document.getElementById('salaryBarChart');
+                if (salaryChart) salaryChart.destroy();
+                salaryChart = new Chart(ctx4, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.salary_by_dept || {}),
+                        datasets: [{
+                            label: 'Avg Salary ($)',
+                            data: Object.values(data.salary_by_dept || {}),
+                            backgroundColor: currentDepartment ? '#f59e0b' : '#10b981'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+                // New Chart: Reasons for Attrition
+                const ctxReason = document.getElementById('reasonChart');
+                if (reasonChart) reasonChart.destroy();
+                reasonChart = new Chart(ctxReason, {
+                    type: 'polarArea',
+                    data: {
+                        labels: Object.keys(data.attrition_reasons || {}),
+                        datasets: [{
+                            data: Object.values(data.attrition_reasons || {}),
+                            backgroundColor: ['#ef4444', '#f97316', '#eab308', '#22c55e', '#3b82f6', '#a855f7'],
+                            borderColor: 'transparent'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+                // New Chart 2: Rating Distribution
+                const ctx5 = document.getElementById('ratingBarChart');
+                if (ratingChart) ratingChart.destroy();
+                ratingChart = new Chart(ctx5, {
+                    type: 'bar',
+                    data: {
+                        labels: Object.keys(data.rating_counts || {}),
+                        datasets: [{
+                            label: 'Employees',
+                            data: Object.values(data.rating_counts || {}),
+                            backgroundColor: currentDepartment ? '#ec4899' : '#8b5cf6'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+                // New Chart 3: Hiring Trends (Year)
+                const ctx6 = document.getElementById('yearLineChart');
+                if (yearChart) yearChart.destroy();
+                yearChart = new Chart(ctx6, {
+                    type: 'line',
+                    data: {
+                        labels: Object.keys(data.joining_year_counts || {}),
+                        datasets: [{
+                            label: 'Hired',
+                            data: Object.values(data.joining_year_counts || {}),
+                            borderColor: currentDepartment ? '#f59e0b' : '#3b82f6',
+                            borderWidth: 2,
+                            fill: true,
+                            backgroundColor: currentDepartment ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)'
+                        }]
+                    },
+                    options: {
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                grid: { color: "#334155" },
+                                ticks: { color: '#94a3b8' }
+                            },
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#94a3b8' }
+                            }
+                        }
+                    }
+                });
+
+            } catch (e) {
+                console.error("API Error", e);
+                alert("Unable to load analytics. Please ensure the backend is running.");
+            }
+        }
+
+        document.getElementById('predForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                Age: document.getElementById('age').value,
+                Department: document.getElementById('dept').value,
+                Role: document.getElementById('role').value,
+                Salary: document.getElementById('salary').value,
+                JoiningYear: document.getElementById('year').value,
+                Gender: document.getElementById('gender').value,
+                Rating: document.getElementById('rating').value,
+                ProjectsCompleted: document.getElementById('projects').value,
+                AvgDailyHours: document.getElementById('hours').value
+            };
+
+            try {
+                const res = await fetch(`${API}/api/predict-attrition`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+
+                const card = document.getElementById('resultCard');
+                card.classList.remove('hidden');
+
+                const txt = document.getElementById('resText');
+                txt.innerText = data.prediction;
+                txt.className = `text-5xl font-bold my-4 ${data.prediction === 'Risk' ? 'text-red-500' : 'text-green-500'}`;
+
+                document.getElementById('resProb').innerText = (data.probability * 100).toFixed(1) + '%';
+
+            } catch (e) { alert("API Error or Model not trained"); }
+        });
+
+        // Add Employee Handler
+        document.getElementById('addEmpForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                Name: document.getElementById('ne_name').value,
+                Age: parseInt(document.getElementById('ne_age').value),
+                Department: document.getElementById('ne_dept').value,
+                Role: document.getElementById('ne_role').value,
+                Salary: parseInt(document.getElementById('ne_salary').value),
+                JoiningYear: parseInt(document.getElementById('ne_year').value),
+                Gender: document.getElementById('ne_gender').value
+            };
+
+            try {
+                const res = await fetch(`${API}/api/employees`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw await res.text();
+                const data = await res.json();
+
+                alert(`Employee Added! ID: ${data.employee_id}`);
+                e.target.reset();
+                loadStats(); // Update dashboard
+            } catch (err) {
+                alert("Error adding employee: " + err);
+            }
+        });
+
+        // Add Performance Handler
+        document.getElementById('addPerfForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const payload = {
+                EmployeeID: parseInt(document.getElementById('np_id').value),
+                Rating: parseInt(document.getElementById('np_rating').value),
+                ProjectsCompleted: parseInt(document.getElementById('np_projects').value),
+                AvgDailyHours: parseInt(document.getElementById('np_hours').value),
+                Attrition: document.getElementById('np_attrition').checked ? 1 : 0,
+                Reason: document.getElementById('np_reason').value
+            };
+
+            try {
+                const res = await fetch(`${API}/api/performance`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!res.ok) throw await res.text();
+
+                alert("Performance Record Updated!");
+                e.target.reset();
+                loadStats(); // Update dashboard
+            } catch (err) {
+                alert("Error updating performance: " + err);
+            }
+        });
+
+        loadStats();
+    </script>
+</body>
+
+</html>
